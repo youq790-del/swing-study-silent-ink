@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#12191a" />
+<title>Swing Study — Silent Ink</title>
+<style>
+:root{--bg:#12191a;--ink:#eae2d2;--faded:#87928b;--line:#45514b;--warm:#ed9b72;--cool:#8dd2b4}
+*{box-sizing:border-box}html,body{padding:0;margin:0;width:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif}
+html{scrollbar-width:none}html::-webkit-scrollbar{display:none}
+.track{height:540vh;position:relative}.screen{position:sticky;top:0;width:100%;height:100vh;height:100dvh;overflow:hidden;isolation:isolate}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:default}
+.word,.motif{position:absolute;z-index:3;left:50%;top:7.3%;transform:translate(-50%,8px);opacity:0;transition:opacity .45s,transform .8s cubic-bezier(.22,1,.36,1);pointer-events:none}.word.visible,.motif.visible{opacity:.9;transform:translate(-50%,0)}
+.motif{display:flex;align-items:center;justify-content:center;gap:12px;min-width:120px;height:32px}
+.motif b{display:block;position:relative;width:28px;height:1px;background:#7a867f;transform-origin:50% 50%;transition:all .45s ease}
+.motif b::before,.motif b::after{content:"";position:absolute;left:0;right:0;height:1px;background:currentColor;color:inherit;opacity:.9}
+.motif b::before{top:-7px}.motif b::after{top:7px}
+.motif.s0 b:nth-child(1){background:var(--warm);width:22px;transform:rotate(18deg)} .motif.s0 b:nth-child(2){background:#d8ccba;width:32px;transform:none} .motif.s0 b:nth-child(3){background:var(--cool);width:22px;transform:rotate(-18deg)}
+.motif.s0 b::before,.motif.s0 b::after{display:none}
+.motif.s1 b:nth-child(1),.motif.s1 b:nth-child(3){width:34px;background:#89968e}.motif.s1 b:nth-child(1){transform:rotate(24deg)} .motif.s1 b:nth-child(3){transform:rotate(-24deg)} .motif.s1 b:nth-child(2){width:20px;background:#d7cfbf}
+.motif.s2 b:nth-child(1),.motif.s2 b:nth-child(3){width:26px;background:#7f9188} .motif.s2 b:nth-child(2){width:34px;background:#d9cebb;transform:scaleY(1)} .motif.s2 b:nth-child(2)::before{top:-8px;left:4px;right:4px} .motif.s2 b:nth-child(2)::after{top:8px;left:4px;right:4px}
+.motif.s3 b:nth-child(1),.motif.s3 b:nth-child(3){width:18px;background:#7e8f87;transform:rotate(90deg)} .motif.s3 b:nth-child(2){width:36px;background:#d6ccbc}
+.motif.s4 b:nth-child(1),.motif.s4 b:nth-child(3){width:28px;background:#7a8a84} .motif.s4 b:nth-child(2){width:14px;background:#d9cfbd;box-shadow:-18px 0 0 0 #d9cfbd,18px 0 0 0 #d9cfbd}
+.scrollhint{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none;transition:opacity 1s}
+.scrollhint i{width:18px;height:1px;background:#718176;display:block;transform-origin:50% 50%;animation:breath 2.4s ease-in-out infinite}.scrollhint i:nth-child(2){animation-delay:.18s}.scrollhint i:nth-child(3){animation-delay:.36s}@keyframes breath{0%,100%{transform:scaleX(.55);opacity:.35}50%{transform:scaleX(1.2);opacity:.92}}
+.controls{position:absolute;z-index:4;left:50%;bottom:7%;transform:translate(-50%,20px);display:flex;align-items:center;gap:24px;opacity:0;pointer-events:none;transition:opacity .4s,transform .6s;white-space:nowrap}
+.controls.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.tabs{display:flex;gap:18px;align-items:center}.tab{appearance:none;border:none;background:none;cursor:pointer;color:#809089;padding:5px 2px;position:relative;font-family:inherit;width:34px;height:24px}
+.tab span,.tab::before,.tab::after{content:"";position:absolute;left:50%;top:50%;display:block;transform:translate(-50%,-50%)}
+.tab.active::after{content:"";position:absolute;height:1px;bottom:0;left:3px;right:3px;background:#eee3d2;top:auto;transform:none}
+.tab[data-mode="natural"] span{width:20px;height:1px;background:#c9cec3;transform:translate(-50%,-50%) rotate(22deg)} .tab[data-mode="natural"]::before{width:20px;height:1px;background:#7e8d86;transform:translate(-50%,-50%) rotate(-22deg)}
+.tab[data-mode="same"] span{width:18px;height:1px;background:#d9cfbe;box-shadow:0 -5px 0 0 #d9cfbe,0 5px 0 0 #d9cfbe}
+.tab[data-mode="active"] span{width:14px;height:14px;border:1px solid #d9cfbe;border-radius:50%}.tab[data-mode="active"]::before{width:8px;height:1px;background:#d9cfbe;transform:translate(-3px,-7px) rotate(35deg)}
+.setting{display:flex;align-items:center;gap:9px;color:#b9bbae}.setting::before,.setting::after{content:"";display:block;width:10px;height:1px;background:#6f7c76;opacity:.7}.setting input{width:138px;appearance:none;background:transparent;cursor:pointer;accent-color:var(--ink)}
+.setting input::-webkit-slider-runnable-track{height:1px;background:#697a71}.setting input::-webkit-slider-thumb{appearance:none;height:11px;width:11px;border-radius:50%;background:#f1e6d5;margin-top:-5px;border:1px solid #a7ada2}
+.setting input::-moz-range-track{height:1px;background:#697a71}.setting input::-moz-range-thumb{height:11px;width:11px;border-radius:50%;background:#f1e6d5;border:0}
+.mininote,.model,.info,.word small,.word span{display:none !important}
+@media(max-width:700px){.track{height:550vh}.motif{top:8%;min-width:100px}.controls{bottom:8.5%;flex-direction:column;gap:9px}.tabs{gap:20px}.setting input{width:130px}.scrollhint{bottom:5%}}
+@media(prefers-reduced-motion:reduce){.scrollhint i{animation:none}.motif,.controls{transition:none}}
+</style>
+</head>
+<body>
+<div class="track" id="track">
+  <main class="screen" id="screen">
+    <canvas id="stage" aria-label="随着滚动从骑车场景进入手绘单摆、柔顺手臂、摆动相位与交互实验。左侧为车把，右侧为手提。"></canvas>
+    <div class="motif s0" id="motif" aria-hidden="true"><b></b><b></b><b></b></div>
+    <div class="scrollhint" id="hint" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="controls" id="controls" role="group" aria-label="对照实验">
+      <div class="tabs"><button class="tab active" data-mode="natural" aria-label="自然模式"><span></span></button><button class="tab" data-mode="same" aria-label="同轨模式"><span></span></button><button class="tab" data-mode="active" aria-label="反馈模式"><span></span></button></div>
+      <label class="setting" aria-label="驱动频率"><input id="frequency" type="range" min="0.27" max="1.1" value="0.64" step="0.01" aria-label="驱动频率" /></label>
+    </div>
+  </main>
+</div>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('stage'),ctx=canvas.getContext('2d',{alpha:false}),track=document.getElementById('track');
+const $=x=>document.getElementById(x);
+const C={bg:'#12191a',ink:'#eae2d2',paper:'#d9c8ae',dim:'#829189',line:'#3b4943',warm:'#ed9b72',cool:'#8dd2b4'};
+const G=9.81,L=.56,Z=.075,A=.026, wh=2*Math.PI*.29, zh=.62,dt=1/150;
+let W=1200,H=760,DPR=1,mobile=false,progress=0,target=0,lastTS=0,acc=0,t=0,mode='natural',freq=.64;
+let state=[0,0,0,0,0,0],trail=[],histTimer=0,drag=null,hover={x:-100,y:-100},isDragging=false;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),sm=x=>{x=clamp(x);return x*x*(3-2*x)},lerp=(a,b,u)=>a+(b-a)*u, windowed=(x,a,b)=>sm((x-a)/(b-a)),range=(x,a,b,c,d)=>lerp(c,d,windowed(x,a,b));
+function alphaBand(x,a,b,c,d){return windowed(x,a,b)*(1-windowed(x,c,d))}
+function size(){const r=canvas.getBoundingClientRect();DPR=Math.min(2.2,devicePixelRatio||1);canvas.width=Math.round(r.width*DPR);canvas.height=Math.round(r.height*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);W=r.width;H=r.height;mobile=W<720}
+new ResizeObserver(size).observe(canvas);size();
+function input(tt){const om=2*Math.PI*freq;return {x:A*Math.sin(om*tt),v:A*om*Math.cos(om*tt),a:-A*om*om*Math.sin(om*tt)}}
+function deriv(s,tt){const q=input(tt),w0=Math.sqrt(G/L);const [thL,vL,thR,vR,h,vh]=s;
+ let ax,xd,vd;
+ if(mode==='same'){ax=q.a;xd=q.v;vd=q.a;}else{const base=wh*wh*(q.x-h)+2*zh*wh*(q.v-vh);const active=mode==='active'?0.65*vR:0;ax=clamp(base+active,-1.5,1.5);xd=vh;vd=ax;}
+ return [vL,-w0*w0*Math.sin(thL)-2*Z*w0*vL-(q.a/L)*Math.cos(thL),vR,-w0*w0*Math.sin(thR)-2*Z*w0*vR-(ax/L)*Math.cos(thR),xd,vd];}
+function step(h){const s=state,a=deriv(s,t),b=deriv(s.map((x,i)=>x+a[i]*h/2),t+h/2),c=deriv(s.map((x,i)=>x+b[i]*h/2),t+h/2),d=deriv(s.map((x,i)=>x+c[i]*h),t+h);state=s.map((x,i)=>x+h*(a[i]+2*b[i]+2*c[i]+d[i])/6);t+=h;if(mode==='same'){const q=input(t);state[4]=q.x;state[5]=q.v;}
+ if(drag){const i=drag.side==='l'?0:2;state[i]=drag.th;state[i+1]=0;}
+ histTimer+=h;if(histTimer>1/40){histTimer=0;const q=input(t);trail.push({t,left:state[0],right:state[2],hl:q.x,hr:mode==='same'?q.x:state[4],el:-L*q.a*state[1]*Math.cos(state[0]),er:-L*(mode==='same'?q.a:deriv(state,t)[5])*state[3]*Math.cos(state[2])});while(trail.length&&trail[0].t<t-5.6)trail.shift();}
+}
+function reset(){state=[0,0,0,0,0,0];t=-12;trail=[];histTimer=0;for(let i=0;i<12/dt;i++)step(dt);t=0;trail=[];histTimer=0;}
+reset();
+function stroke(points,color=C.ink,width=2,opacity=1,frac=1){if(points.length<2||opacity<=0||frac<=0)return;let seg=[],total=0;for(let i=1;i<points.length;i++){const d=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]);seg.push(d);total+=d;}
+ const remaining=total*clamp(frac);let left=remaining;
+ ctx.save();ctx.beginPath();ctx.moveTo(...points[0]);for(let i=1;i<points.length&&left>0;i++){const amount=Math.min(left,seg[i-1]),u=seg[i-1]>0?amount/seg[i-1]:0;ctx.lineTo(lerp(points[i-1][0],points[i][0],u),lerp(points[i-1][1],points[i][1],u));left-=amount;}ctx.strokeStyle=color;ctx.lineWidth=width;ctx.globalAlpha=opacity;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();ctx.restore();}
+const seg=(x1,y1,x2,y2)=>[[x1,y1],[x2,y2]];
+function curve(a,b,c,d,n=38){const pts=[];for(let i=0;i<=n;i++){const t=i/n,u=1-t;pts.push([u*u*u*a[0]+3*u*u*t*b[0]+3*u*t*t*c[0]+t*t*t*d[0],u*u*u*a[1]+3*u*u*t*b[1]+3*u*t*t*c[1]+t*t*t*d[1]])}return pts;}
+function arc(cx,cy,rad,s=0,e=Math.PI*2,n=90){const pts=[];for(let i=0;i<=n;i++){const th=lerp(s,e,i/n);pts.push([cx+rad*Math.cos(th),cy+rad*Math.sin(th)])}return pts}
+function dot(x,y,r,col,op=1){ctx.save();ctx.globalAlpha=op;ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore()}
+function label(str,x,y,sz=12,c=C.ink,align='center',opacity=1,spacing=0){ctx.save();ctx.textAlign=align;ctx.fillStyle=c;ctx.globalAlpha=opacity;ctx.font=`400 ${sz}px system-ui,'PingFang SC',sans-serif`;if(ctx.letterSpacing!==undefined)ctx.letterSpacing=`${spacing}px`;ctx.fillText(str,x,y);ctx.restore()}
+function bag(x,y,angle,sc,alpha){if(alpha<.01)return;ctx.save();ctx.translate(x,y);ctx.rotate(-angle*.44);ctx.scale(sc,sc);ctx.globalAlpha=alpha;
+ stroke(curve([-13,-19],[-19,-49],[18,-49],[13,-19]),C.paper,2.4,1);
+ stroke(curve([-8,-19],[-11,-38],[11,-38],[8,-19]),C.paper,1.2,.8);
+ ctx.beginPath();ctx.moveTo(-24,-17);ctx.lineTo(24,-17);ctx.lineTo(29,25);ctx.quadraticCurveTo(0,34,-29,25);ctx.closePath();ctx.fillStyle='#ddcfb7';ctx.fill();ctx.strokeStyle='#f3e7d3';ctx.lineWidth=1.2;ctx.stroke();
+ stroke(seg(-17,-10,-19,24),'#ad9577',1,.8);stroke(seg(17,-10,19,24),'#ad9577',1,.8);
+ ctx.fillStyle='#816d59';ctx.fillRect(-9,-4,18,4);ctx.beginPath();ctx.moveTo(-7,2);ctx.lineTo(7,2);ctx.lineTo(5,16);ctx.quadraticCurveTo(0,19,-5,16);ctx.closePath();ctx.fill();stroke(seg(-5,8,5,8),'#d7c2a3',1.2,1);ctx.restore();}
+function background(){ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,H);
+ // Soft graphite paper: no glow, no neon.
+ const g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#121a19');g.addColorStop(.6,'#151d1c');g.addColorStop(1,'#101719');ctx.fillStyle=g;ctx.globalAlpha=.76;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;
+ // Delicate baseline and a barely visible grain field.
+ for(let i=0;i<35;i++){const x=((i*127.3)%W),y=((i*191.7)%H);dot(x,y,.45,'#b8c1b0',.1)}
+}
+function coords(){const m=mobile,split=m?W*.282:W*.268,other=m?W*.725:W*.732;
+ const yReal=m?H*.43:H*.46,yAbs=m?H*.30:H*.31;const u=windowed(progress,.52,1.25);const y=lerp(yReal-10,yAbs,u);const length=lerp(m?H*.19:H*.22,m?H*.245:H*.29,u);
+ const xleft=split+input(t).x*(m?220:340),xright=other+(mode==='same'?input(t).x:state[4])*(m?220:340);
+ // tiny secondary camera drift follows the animation rather than an arbitrary parallax amount.
+ return {left:{x:xleft,y},right:{x:xright,y},length,u,centers:[split,other]};}
+function sceneObject(side,pos,length,u,alpha=1){const k=side==='l'?0:2,col=side==='l'?C.warm:C.cool,theta=state[k];const x=pos.x+length*Math.sin(theta),y=pos.y+length*Math.cos(theta);const realFade=1-windowed(u,.58,.94);
+ const bSc=lerp(mobile?.85:1.1,mobile?.84:1.04,u);
+ const handleY=y-31*bSc;
+ stroke(seg(pos.x,pos.y,x,handleY),C.ink,1.8,alpha*.9);
+ // Dot and ring at the support point.
+ dot(pos.x,pos.y,4.1,col,alpha);stroke(arc(pos.x,pos.y,10,0,Math.PI*2,60),col,.8,alpha*.24);
+ // Continuously remove an ideal vertical line and reveal the actual arc.
+ if(u>.15){stroke(seg(pos.x,pos.y,pos.x,pos.y+length),C.line,1,alpha*.33*(u-.15));stroke(arc(pos.x,pos.y,length,Math.PI*.2,Math.PI*.80,75),C.line,1,alpha*.28*windowed(u,.22,.6));}
+ // Motion history adds a nearly transparent hand-drawn tail.
+ if(u>.12){const arr=[];for(const h of trail){if(h.t<t-2.3)continue;const a=side==='l'?h.left:h.right,px=(side==='l'?coords().centers[0]:coords().centers[1])+(side==='l'?h.hl:h.hr)*(mobile?220:340);arr.push([px+length*Math.sin(a),pos.y+length*Math.cos(a)]);}stroke(arr,col,1.65,alpha*.17*windowed(u,.12,.38));}
+ bag(x,y,theta,bSc,alpha);if(!mobile&&progress>.68&&Math.hypot(hover.x-x,hover.y-y)<56){stroke(arc(x,y,48,0,Math.PI*2,72),col,.85,.48);label('拖动',x,y+67,10,col,'center',.66,2);}return {x,y,pivot:pos};}
+function drawBike(cx,cy,side,appear){if(appear<=.002)return;const s=mobile?.68:1.06, rr=mobile?25:37, bx=cx-22*s,base=cy+54*s;ctx.save();ctx.translate(bx,base);ctx.scale(s,s);ctx.globalAlpha=appear;
+ const p1=[-65,0],p2=[75,0],bb=[7,-5],seat=[-23,-66],stem=[53,-61],shoulder=[-17,-120],hip=[-26,-74],head=[-9,-150],bar=[59,-91];
+ let r=clamp(appear*1.5);const segments=[seg(...p1,...seat),seg(...seat,...bb),seg(...bb,...p1),seg(...bb,...p2),seg(...p2,...stem),seg(...stem,...seat),seg(...seat, -35,-72),seg(...stem,...bar),seg(38,-92,78,-92)];
+ // reveal/retract drawing progressively instead of fading a static icon
+ for(let i=0;i<segments.length;i++){const k=clamp(r*1.35-i*.057);stroke(segments[i],C.ink,i<6?1.9:2.2,.92,k)}
+ stroke(arc(...p1,rr,Math.PI*1.5,Math.PI*3.5,90),C.ink,1.6,.8,clamp(r*1.2));stroke(arc(...p2,rr,Math.PI*1.5,Math.PI*3.5,90),C.ink,1.6,.8,clamp(r*1.2));
+ stroke(seg(...hip,...shoulder),C.ink,4.6,.96,r);dot(...head,11,C.ink,.96*r);
+ const elbow=[13,-112],hand=side==='l'?bar:[88,-85];
+ stroke(curve(shoulder,[2,-125],elbow,elbow,16),C.ink,4.5,.93,r);
+ stroke(curve(elbow,[37,-103],[44,-99],hand,20),C.ink,3.7,.93,r);
+ const pedal=[bb[0]+14*Math.cos(t*2.5),bb[1]+14*Math.sin(t*2.5)],knee=[-5+12*Math.sin(t*2.5),-34];
+ stroke(seg(...hip,...knee),C.ink,3.4,.85,r);stroke(seg(...knee,...pedal),C.ink,3.2,.85,r);
+ // Imperfect horizontal movement ink, not literal motion blur.
+ stroke(curve([-113,15],[-132,15],[-153,15],[-178,15]),C.line,1,.36*r);
+ ctx.restore();}
+function springDiagram(p,side,alpha){if(alpha<.01)return;const source={x:p.x,y:p.y-97},anchor={x:p.x,y:p.y};const col=side==='l'?C.warm:C.cool;
+ dot(source.x,source.y,3,C.ink,alpha*.70);
+ if(side==='l'){
+  stroke(seg(source.x,source.y,anchor.x,anchor.y),C.ink,1.5,alpha*.78);
+  stroke(seg(source.x-22,source.y,source.x+22,source.y),col,2,alpha*.65);
+ }else{
+  // A spring-like, flexible line is generated from the actual displacement (not pre-rendered animation).
+  const pts=[];const dy=anchor.y-source.y;for(let i=0;i<=90;i++){const t=i/90,env=Math.sin(Math.PI*t)**1.3;const dx=13*env*Math.sin(t*Math.PI*8)+Math.sin(t*8+performance.now()*.0004)*1.2*env;pts.push([lerp(source.x,anchor.x,t)+dx,source.y+dy*t]);}
+  stroke(pts,col,1.7,alpha*.9);
+  // Spring damping companion as a thin double line.
+  stroke(seg(source.x+26,source.y+9,source.x+26,source.y+31),C.line,1.4,alpha*.6);
+  stroke(seg(source.x+19,source.y+31,source.x+33,source.y+31),C.line,2,alpha*.6);
+  stroke(seg(source.x+26,source.y+31,source.x+26,anchor.y-12),C.line,1.4,alpha*.6);
+ }
+}
+function wave(k,x,y,width,height,opacity){if(opacity<=0)return;const pts=[];for(const h of trail){const px=x+width*(1-(t-h.t)/5.5);if(px<x||px>x+width)continue;const v=k==='l'?h.left:h.right;pts.push([px,y-height*v*.78]);}stroke(seg(x,y,x+width,y),C.line,.9,.65*opacity);stroke(pts,k==='l'?C.warm:C.cool,2,opacity);}
+function energyMarker(k,x,y,alpha){const values=trail.slice(-90).map(d=>k==='l'?d.el:d.er), mean=values.reduce((a,b)=>a+b,0)/(values.length||1), maxScale=.30;const len=clamp(Math.abs(mean)/maxScale,0,1)*70;const col=k==='l'?C.warm:C.cool;stroke(seg(x-40,y,x+40,y),C.line,1,.7*alpha);stroke(seg(x,y,x+Math.sign(mean)*len,y),col,3,alpha);dot(x,y,2.2,C.ink,.8*alpha);label('−',x-47,y+4,12,C.dim,'center',alpha);label('+',x+47,y+4,12,C.dim,'center',alpha);}
+
+function laneMarks(x,y,col,a=1){stroke([[x-13,y],[x+13,y]],col,1.4,a);stroke([[x-8,y-7],[x+8,y-7]],C.line,1,a*.6);stroke([[x-8,y+7],[x+8,y+7]],C.line,1,a*.6)}
+function modeGlyph(kind,x,y,a=1){ctx.save();ctx.globalAlpha=a;ctx.translate(x,y);ctx.lineCap='round';ctx.lineJoin='round';if(kind==='same'){stroke([[-34,-6],[-12,-6]],C.paper,1.4,1);stroke([[-34,6],[-12,6]],C.paper,1.4,1);stroke([[12,-6],[34,-6]],C.paper,1.4,1);stroke([[12,6],[34,6]],C.paper,1.4,1);stroke([[-6,-1],[6,-1]],C.dim,1,1);stroke([[-6,1],[6,1]],C.dim,1,1);}else if(kind==='active'){ctx.beginPath();ctx.arc(0,0,12,-2.2,1.1);ctx.strokeStyle=C.paper;ctx.lineWidth=1.2;ctx.stroke();stroke([[6,-9],[12,-11],[10,-5]],C.paper,1.2,1);stroke([[-30,0],[-10,0]],C.dim,1,1);stroke([[10,0],[30,0]],C.dim,1,1);}else{stroke([[-28,-7],[-8,0],[-28,7]],C.dim,1,1);stroke([[28,-7],[8,0],[28,7]],C.dim,1,1);stroke([[-5,0],[5,0]],C.paper,1.2,1);}ctx.restore();}
+function render(){background();const p=progress,geo=coords(),aIntro=1-windowed(p,.45,1.22),aDiagram=windowed(p,.42,1.15),aSpring=alphaBand(p,1.04,1.68,2.72,3.23),aWave=windowed(p,1.88,2.72),aEnergy=alphaBand(p,2.22,2.78,3.30,3.75),aTrial=windowed(p,3.28,3.90);
+ // Deliberate, calm camera drift. Scene geometry itself remains continuous.
+ const cameraS=1+0.07*windowed(p,.45,1.30)-0.025*windowed(p,3.23,4),cameraY=lerp(0,H*.016,windowed(p,.62,1.6));
+ ctx.save();ctx.translate(W/2,H/2+cameraY);ctx.scale(cameraS,cameraS);ctx.translate(-W/2,-H/2);
+ // A beautifully restrained baseline.
+ stroke(seg(W*.08,H*.72,W*.92,H*.72),C.line,1,.22);
+ if(aIntro>.001){for(const [side,pivot] of [['l',geo.left],['r',geo.right]]){const sf=mobile?.68:1.06,hx=side==='l'?59:88,hy=side==='l'?-91:-85;const cx=pivot.x-(hx-22)*sf,cy=pivot.y-(54+hy)*sf;drawBike(cx,cy,side,aIntro*sm((t+.35)/1.75));}}
+ // Scientific layer uses exact same bags and pivot locations as the figurative layer.
+ if(aDiagram>.015){const lineY=geo.left.y-97;stroke(seg(W*.11,lineY-2,W*.89,lineY-2),C.line,1,.18*aDiagram)}
+ const l=sceneObject('l',geo.left,geo.length,geo.u,1),r=sceneObject('r',geo.right,geo.length,geo.u,1);
+ springDiagram(geo.left,'l',aSpring);springDiagram(geo.right,'r',aSpring);
+ if(aDiagram>.05){laneMarks(geo.centers[0],H*.75,C.warm,aDiagram*.9);laneMarks(geo.centers[1],H*.75,C.cool,aDiagram*.9);}
+ // A hand-drawn trace of the input sources: note same body input in both paths.
+ const traceIn=alphaBand(p,1.07,1.8,2.5,3.12);
+ if(traceIn>.01){const ww=mobile?W*.29:W*.23, top=mobile?H*.17:H*.18;
+  for(const [k,center,col] of [['l',geo.centers[0],C.warm],['r',geo.centers[1],C.cool]]){
+   const path=[];for(const h of trail){const px=center-ww/2+ww*(1-(t-h.t)/5.6);if(px<center-ww/2||px>center+ww/2)continue;const displacement=k==='l'?h.hl:h.hr;path.push([px,top+displacement*(mobile?180:260)]);}stroke(path,col,1.5,traceIn);
+  }
+ }
+ // Animated phase circle and tangent vectors: an idea shown as geometry, not a formula panel.
+ if(aWave>.03){for(const [k,bob,col,ang,vel] of [['l',l,C.warm,state[0],state[1]],['r',r,C.cool,state[2],state[3]]]){
+   const center={x:geo.centers[k==='l'?0:1],y:geo.left.y};const R=geo.length;
+   stroke(arc(center.x,center.y,R,Math.PI*.24,Math.PI*.76,64),col,1,aWave*.33);
+   const norm=Math.min(42,Math.abs(vel)*25);const dir=Math.sign(vel)||1;const theta=ang;
+   stroke([[bob.x,bob.y],[bob.x+norm*Math.cos(theta)*dir,bob.y-norm*Math.sin(theta)*dir]],col,2.1,aWave*.86);
+   dot(bob.x,bob.y,1.3,col,aWave*.7);
+ }
+ }
+ if(aWave>.07||aTrial>.07){const alpha=Math.max(aWave*.84,aTrial);const y=mobile?H*.80:H*.815;const wid=mobile?W*.29:W*.26;wave('l',geo.centers[0]-wid/2,y,wid,mobile?70:84,alpha);wave('r',geo.centers[1]-wid/2,y,wid,mobile?70:84,alpha);}
+ if(aEnergy>.02){const y=mobile?H*.895:H*.915;energyMarker('l',geo.centers[0],y,aEnergy);energyMarker('r',geo.centers[1],y,aEnergy);}
+ // A tiny nonlinear force cue, not decoration: its direction is attached to angular velocity.
+ if(aTrial>.5){modeGlyph(mode,W*.5,mobile?H*.18:H*.19,aTrial*.88);}
+ ctx.restore();
+}
+
+function scrollUpdate(){const total=Math.max(1,track.offsetHeight-window.innerHeight);target=clamp(window.scrollY/total)*4;$('hint').style.opacity=String(1-windowed(target,.02,.40));const idx=clamp(Math.round(target),0,4), dist=Math.abs(target-idx), show=dist<.32;const motif=$('motif');motif.className='motif s'+idx+(show?' visible':'');$('controls').classList.toggle('show',target>3.65);}
+window.addEventListener('scroll',scrollUpdate,{passive:true});window.addEventListener('resize',scrollUpdate);scrollUpdate();
+function loop(ts){if(!lastTS)lastTS=ts;const delta=Math.min(.055,(ts-lastTS)/1000);lastTS=ts;
+ progress+=(target-progress)*Math.min(1,delta*8.5);acc+=delta;let n=0;while(acc>=dt&&n++<10){step(dt);acc-=dt;}render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+// Drag the real physical pendulum; allow normal vertical scrolling on touch screens.
+function pointer(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+function hit(e){if(progress<.67)return;const q=pointer(e),g=coords();for(const [side,p] of [['l',g.left],['r',g.right]]){const k=side==='l'?0:2,x=p.x+g.length*Math.sin(state[k]),y=p.y+g.length*Math.cos(state[k]);if(Math.hypot(q.x-x,q.y-y)<(mobile?42:50))return {side,p};}}
+canvas.addEventListener('pointerdown',e=>{const found=hit(e);if(!found)return;drag={side:found.side,th:0};isDragging=true;canvas.setPointerCapture(e.pointerId);onDrag(e);});
+function onDrag(e){if(!drag)return;const g=coords(),q=pointer(e),p=drag.side==='l'?g.left:g.right;drag.th=clamp(Math.atan2(q.x-p.x,q.y-p.y),-1.08,1.08);const i=drag.side==='l'?0:2;state[i]=drag.th;state[i+1]=0;}
+canvas.addEventListener('pointermove',e=>{hover=pointer(e);onDrag(e);canvas.style.cursor=hit(e)?'grab':'default';});
+function release(e){drag=null;isDragging=false;try{if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId)}catch{}}
+canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
+for(const button of document.querySelectorAll('[data-mode]'))button.addEventListener('click',()=>{mode=button.dataset.mode;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b===button));reset()});
+$('frequency').addEventListener('input',e=>{freq=Number(e.target.value);reset()});
+
+window.__swingDebug={get progress(){return progress},get target(){return target},get mode(){return mode},get state(){return [...state]},get trail(){return trail.length}};
+})();
+</script>
+</body>
+</html>
